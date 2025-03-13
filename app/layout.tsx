@@ -6,9 +6,9 @@ import Script from 'next/script';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'RevX AI Assistant | Powered by Spu',
+  title: 'RevX AI Assistant | Powered by REVX',
   description: 'Your intelligent voice assistant for RevX digital consulting services',
-  keywords: 'RevX, digital consulting, voice assistant, AI, hospitality industry',
+  keywords: 'RevX, digital consulting, voice assistant, AI, hospitality industry, Santosh',
 };
 
 export default function RootLayout({

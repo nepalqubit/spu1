@@ -35,7 +35,7 @@ export default function Home() {
         <ClientHome />
 
         <div className="mt-8 text-center text-xs text-gray-400">
-          <p>Powered by Spu AI | © {new Date().getFullYear()} RevX</p>
+          <p>Powered by REVX | © {new Date().getFullYear()} Santosh</p>
         </div>
       </div>
     </main>
