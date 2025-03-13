@@ -19,11 +19,14 @@ export default function ClientHome() {
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState('');
   const [textInput, setTextInput] = useState('');
-  const [isCopied, setCopyToClipboard] = useClipboard(response, {
+  const [conversation, setConversation] = useState<{type: 'user' | 'assistant', content: string}[]>([]);
+  const [textToCopy, setTextToCopy] = useState('');
+  const [isCopied, setCopyToClipboard] = useClipboard(textToCopy, {
     successDuration: 2000,
   });
   const [microphoneError, setMicrophoneError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -94,6 +97,9 @@ export default function ClientHome() {
   const handleQuery = useCallback(async (query: string) => {
     let response = "";
     const lowercaseQuery = query.toLowerCase();
+    
+    // Add user message to conversation
+    setConversation(prev => [...prev, {type: 'user', content: query}]);
     
     if (lowercaseQuery.includes("who is revx") || 
         lowercaseQuery.includes("about revx") || 
@@ -185,6 +191,8 @@ export default function ClientHome() {
     }
     
     setResponse(response);
+    // Add assistant response to conversation
+    setConversation(prev => [...prev, {type: 'assistant', content: response}]);
   }, []);
 
   const commands = [
@@ -259,6 +267,13 @@ export default function ClientHome() {
     }
   };
 
+  // Auto-scroll to bottom of chat when conversation updates
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [conversation]);
+
   if (!speechInitialized) {
     return <div className="p-4 text-center">Initializing speech recognition...</div>;
   }
@@ -275,7 +290,7 @@ export default function ClientHome() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col h-[600px]">
       {microphoneError && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-yellow-700">Microphone error: {microphoneError}</p>
@@ -283,22 +298,22 @@ export default function ClientHome() {
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6">
         <button
           onClick={toggleListening}
-          className={`p-4 rounded-full flex items-center justify-center ${
+          className={`p-3 rounded-full flex items-center justify-center ${
             isListening
               ? 'bg-red-500 hover:bg-red-600'
               : 'bg-blue-500 hover:bg-blue-600'
           } text-white transition-colors duration-200`}
         >
           {isListening ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
             </svg>
           ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           )}
@@ -313,18 +328,76 @@ export default function ClientHome() {
               Listening...
             </span>
           ) : (
-            <span className="text-gray-500">Click to start</span>
+            <span className="text-gray-500">Click microphone to start voice input</span>
           )}
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-        <h2 className="text-lg font-semibold text-gray-700 mb-2">Your Query:</h2>
-        <p className="text-gray-600 min-h-[40px]">{transcript || 'Click the microphone button and speak your question...'}</p>
+      {/* Chat container with message bubbles */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 bg-gray-50 rounded-lg"
+        style={{ height: 'calc(100% - 180px)' }}
+      >
+        {conversation.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-400 text-center">
+            <div>
+              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <p>Start a conversation with RevX AI Assistant</p>
+              <p className="text-sm mt-2">Ask about our services, case studies, or contact information</p>
+            </div>
+          </div>
+        ) : (
+          conversation.map((message, index) => (
+            <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div 
+                className={`max-w-[80%] p-3 rounded-lg ${
+                  message.type === 'user' 
+                    ? 'bg-blue-500 text-white rounded-br-none' 
+                    : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                }`}
+              >
+                {message.type === 'assistant' && (
+                  <div className="flex items-center mb-1">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mr-2">
+                      <span className="text-white text-xs font-bold">R</span>
+                    </div>
+                    <span className="text-xs font-medium">RevX Assistant</span>
+                  </div>
+                )}
+                <div className="whitespace-pre-line">{message.content}</div>
+                {message.type === 'assistant' && (
+                  <button
+                    onClick={() => {
+                      setTextToCopy(message.content);
+                      setCopyToClipboard();
+                    }}
+                    className="text-xs mt-2 px-2 py-1 bg-gray-100 text-gray-700 rounded"
+                  >
+                    {isCopied && textToCopy === message.content ? 'Copied!' : 'Copy'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+        
+        {/* Show transcript while listening */}
+        {isListening && transcript && (
+          <div className="flex justify-end">
+            <div className="max-w-[80%] p-3 bg-blue-200 text-blue-800 rounded-lg rounded-br-none italic">
+              {transcript}
+              <div className="text-xs text-blue-600 mt-1">Listening...</div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <form onSubmit={handleTextSubmit} className="mb-4">
-        <div className="flex gap-2">
+      {/* Input form at bottom */}
+      <form onSubmit={handleTextSubmit} className="mt-auto">
+        <div className="flex gap-2 items-center">
           <input
             type="text"
             value={textInput}
@@ -335,30 +408,19 @@ export default function ClientHome() {
           />
           <button
             type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg"
+            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg flex items-center justify-center"
+            disabled={!textInput.trim()}
           >
-            Send
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
           </button>
         </div>
       </form>
 
-      {response && (
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-semibold text-blue-700">Response:</h2>
-            <button
-              onClick={() => setCopyToClipboard()}
-              className="text-sm bg-white px-2 py-1 rounded border border-blue-200 text-blue-600"
-            >
-              {isCopied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-          <div className="text-blue-700 whitespace-pre-line">{response}</div>
-        </div>
-      )}
-
+      {/* Quick questions section */}
       <div className="mt-4">
-        <h3 className="text-sm font-medium text-gray-500 mb-2">Try asking:</h3>
+        <h3 className="text-xs font-medium text-gray-500 mb-2">Try asking:</h3>
         <div className="flex flex-wrap gap-2">
           {[
             "What is RevX?", 
