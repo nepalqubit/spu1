@@ -18,14 +18,25 @@ declare global {
 export function SpeechSetup() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Ensure regenerator-runtime is available globally
-      if (!window.regeneratorRuntime) {
-        window.regeneratorRuntime = require('regenerator-runtime');
+      try {
+        // Ensure regenerator-runtime is available globally
+        if (!window.regeneratorRuntime) {
+          window.regeneratorRuntime = require('regenerator-runtime');
+          console.log('Regenerator runtime initialized successfully');
+        }
+        
+        // Set up browser-specific speech recognition
+        window.SpeechRecognition = window.SpeechRecognition || 
+                                  window.webkitSpeechRecognition;
+                                  
+        if (!window.SpeechRecognition) {
+          console.warn('Speech Recognition API is not supported in this browser. Please use Chrome, Edge, or Safari.');
+        } else {
+          console.log('Speech Recognition API initialized successfully');
+        }
+      } catch (error) {
+        console.error('Failed to initialize speech recognition:', error);
       }
-      
-      // Set up browser-specific speech recognition
-      window.SpeechRecognition = window.SpeechRecognition || 
-                                window.webkitSpeechRecognition;
     }
   }, []);
   

@@ -101,7 +101,41 @@ export default function ClientHome() {
     // Add user message to conversation
     setConversation(prev => [...prev, {type: 'user', content: query}]);
     
-    if (lowercaseQuery.includes("who is revx") || 
+    // Enhanced greetings and common phrases handling
+    if (lowercaseQuery.includes("hello") || 
+        lowercaseQuery.includes("hi") || 
+        lowercaseQuery.includes("hey") ||
+        lowercaseQuery.includes("greetings") ||
+        lowercaseQuery.includes("good morning") ||
+        lowercaseQuery.includes("good afternoon") ||
+        lowercaseQuery.includes("good evening") ||
+        lowercaseQuery.includes("howdy")) {
+      const timeOfDay = new Date().getHours();
+      let greeting = "Hello";
+      if (timeOfDay < 12) greeting = "Good morning";
+      else if (timeOfDay < 17) greeting = "Good afternoon";
+      else greeting = "Good evening";
+      
+      response = `${greeting}! I'm Spu, RevX's AI assistant. How can I help you today? Feel free to ask about our services, success stories, or how to get in touch with us.`;
+    }
+    else if (lowercaseQuery.includes("how are you") ||
+             lowercaseQuery.includes("how're you") ||
+             lowercaseQuery.includes("how you doing") ||
+             lowercaseQuery.includes("how's it going")) {
+      response = "I'm doing great, thank you for asking! I'm here to help you learn more about RevX. What would you like to know?";
+    }
+    else if (lowercaseQuery.includes("thank") ||
+             lowercaseQuery.includes("thanks") ||
+             lowercaseQuery.includes("appreciate")) {
+      response = "You're welcome! Is there anything else you'd like to know about RevX?";
+    }
+    else if (lowercaseQuery.includes("bye") ||
+             lowercaseQuery.includes("goodbye") ||
+             lowercaseQuery.includes("see you") ||
+             lowercaseQuery.includes("talk to you later")) {
+      response = "Thank you for your interest in RevX! If you need any further assistance, don't hesitate to reach out. Have a great day!";
+    }
+    else if (lowercaseQuery.includes("who is revx") || 
         lowercaseQuery.includes("about revx") || 
         lowercaseQuery.includes("what is revx") || 
         lowercaseQuery.includes("tell me about") || 
@@ -180,12 +214,6 @@ export default function ClientHome() {
              lowercaseQuery.includes("web address")) {
       response = `You can visit RevX's website at ${businessInfo.contactInfo.website}`;
     }
-    else if (lowercaseQuery.includes("hello") || 
-             lowercaseQuery.includes("hi") || 
-             lowercaseQuery.includes("hey") ||
-             lowercaseQuery.includes("greetings")) {
-      response = "Hello! I'm Spu, RevX's AI assistant. How can I help you learn more about RevX's digital consulting services today?";
-    }
     else {
       response = "I'm not sure I understand your question. You can ask me about RevX's services, case studies, contact information, or specific clients like Bar Peepal Resort. How else can I assist you?";
     }
@@ -197,8 +225,20 @@ export default function ClientHome() {
 
   const commands = [
     {
-      command: ['hello', 'hi', 'hey'],
+      command: ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'howdy'],
       callback: () => handleQuery('hello'),
+    },
+    {
+      command: ['how are you', "how's it going", 'how you doing'],
+      callback: () => handleQuery('how are you'),
+    },
+    {
+      command: ['thank you', 'thanks', 'appreciate it'],
+      callback: () => handleQuery('thank you'),
+    },
+    {
+      command: ['goodbye', 'bye', 'see you', 'talk to you later'],
+      callback: () => handleQuery('goodbye'),
     },
     {
       command: ['what is RevX', 'who is RevX', 'tell me about RevX'],
@@ -226,31 +266,57 @@ export default function ClientHome() {
   } = useSpeechRecognition({ commands });
 
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => setMicrophoneError(null))
-        .catch(error => {
-          console.error("Microphone error:", error);
-          setMicrophoneError(error.message || 'Microphone permission denied');
-        });
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+        console.log('Requesting microphone permission...');
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(() => {
+            console.log('Microphone permission granted');
+            setMicrophoneError(null);
+          })
+          .catch(error => {
+            console.error("Microphone error:", error);
+            setMicrophoneError(error.message || 'Microphone permission denied');
+          });
+      } else {
+        console.warn('MediaDevices API not available in this browser');
+        setMicrophoneError('MediaDevices API not available in this browser. Please use a modern browser.');
+      }
+    } catch (error) {
+      console.error('Error requesting microphone permissions:', error);
+      setMicrophoneError('Error requesting microphone permissions: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }, []);
 
   useEffect(() => {
     setIsListening(listening);
-  }, [listening]);
+    console.log('Speech recognition listening state:', listening);
+    
+    if (!browserSupportsSpeechRecognition) {
+      console.error('Speech recognition is not supported in this browser');
+      setMicrophoneError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+    }
+  }, [listening, browserSupportsSpeechRecognition]);
 
   const toggleListening = () => {
     try {
       if (listening) {
         SpeechRecognition.stopListening();
+        console.log('Speech recognition stopped');
       } else {
         resetTranscript();
-        if (typeof window !== 'undefined' && 
-            (window.SpeechRecognition || window.webkitSpeechRecognition)) {
-          SpeechRecognition.startListening({ continuous: true });
+        if (typeof window !== 'undefined') {
+          if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+            console.log('Starting speech recognition...');
+            SpeechRecognition.startListening({ continuous: true });
+          } else {
+            console.error('Speech recognition not available in this browser');
+            setMicrophoneError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+            throw new Error('Speech recognition not available in this browser');
+          }
         } else {
-          throw new Error('Speech recognition not available in this browser');
+          console.error('Window object not available');
+          throw new Error('Window object not available');
         }
       }
     } catch (error) {
