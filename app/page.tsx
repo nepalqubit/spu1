@@ -1,5 +1,6 @@
 import Script from 'next/script';
 import dynamic from 'next/dynamic';
+import { SpeechSetup } from './components/SpeechSetup';
 
 // Dynamically import the client component with no SSR to prevent hydration issues
 const ClientHome = dynamic(() => import('./page.client'), { 
@@ -15,6 +16,9 @@ export default function Home() {
         src="https://unpkg.com/regenerator-runtime@0.13.9/runtime.js"
         strategy="beforeInteractive"
       />
+
+      {/* Add the SpeechSetup component to initialize everything properly */}
+      <SpeechSetup />
 
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">

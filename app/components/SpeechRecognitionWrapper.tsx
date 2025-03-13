@@ -4,6 +4,15 @@ import 'regenerator-runtime/runtime';
 import { useEffect, useState, ReactNode } from 'react';
 import SpeechRecognition from 'react-speech-recognition';
 
+// Add a global declaration for TypeScript
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+    regeneratorRuntime: any;
+  }
+}
+
 interface SpeechRecognitionWrapperProps {
   children: ReactNode;
 }
@@ -17,14 +26,24 @@ export default function SpeechRecognitionWrapper({ children }: SpeechRecognition
       try {
         if (typeof window !== 'undefined') {
           // Set up browser-specific speech recognition
-          window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          window.SpeechRecognition = window.SpeechRecognition || 
+                                    window.webkitSpeechRecognition;
           
-          // Check if available
-          if (!window.SpeechRecognition) {
-            console.warn('Speech recognition is not supported in this browser');
+          // Check if regenerator-runtime is available
+          if (!window.regeneratorRuntime && typeof require !== 'undefined') {
+            try {
+              window.regeneratorRuntime = require('regenerator-runtime');
+            } catch (e) {
+              console.error('Failed to load regenerator-runtime:', e);
+            }
           }
           
-          setIsInitialized(true);
+          // Check if speech recognition is available
+          if (!window.SpeechRecognition) {
+            console.warn('Speech recognition is not supported in this browser');
+          } else {
+            setIsInitialized(true);
+          }
         }
       } catch (error) {
         console.error('Failed to initialize speech recognition:', error);
@@ -45,7 +64,7 @@ export default function SpeechRecognitionWrapper({ children }: SpeechRecognition
   }, []);
 
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return <div className="p-4">Initializing speech recognition...</div>;
   }
 
   return <>{children}</>;

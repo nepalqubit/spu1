@@ -4,8 +4,18 @@ import 'regenerator-runtime/runtime';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import useClipboard from 'react-use-clipboard';
+import { SpeechSetup } from '../app/components/SpeechSetup';
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+    regeneratorRuntime: any;
+  }
+}
 
 export default function ClientHome() {
+  const [speechInitialized, setSpeechInitialized] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [response, setResponse] = useState('');
   const [textInput, setTextInput] = useState('');
@@ -14,6 +24,17 @@ export default function ClientHome() {
   });
   const [microphoneError, setMicrophoneError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && !window.regeneratorRuntime) {
+        window.regeneratorRuntime = require('regenerator-runtime');
+      }
+      setSpeechInitialized(true);
+    } catch (error) {
+      console.error('Failed to initialize regenerator-runtime:', error);
+    }
+  }, []);
 
   // RevX business information database
   const businessInfo = {
@@ -70,13 +91,10 @@ export default function ClientHome() {
     ]
   };
 
-  // Create a memoized version of the handleQuery function
   const handleQuery = useCallback(async (query: string) => {
-    // Response logic based on RevX business information
     let response = "";
     const lowercaseQuery = query.toLowerCase();
     
-    // About the company
     if (lowercaseQuery.includes("who is revx") || 
         lowercaseQuery.includes("about revx") || 
         lowercaseQuery.includes("what is revx") || 
@@ -84,25 +102,21 @@ export default function ClientHome() {
         lowercaseQuery.includes("what does revx do")) {
       response = businessInfo.description;
     }
-    // Services
     else if (lowercaseQuery.includes("services") || 
              lowercaseQuery.includes("what do you offer") || 
              lowercaseQuery.includes("offer") || 
              lowercaseQuery.includes("provide")) {
       response = `RevX offers a comprehensive suite of services including: ${businessInfo.services.join(", ")}.`;
     }
-    // Specialization
     else if (lowercaseQuery.includes("specialization") || 
              lowercaseQuery.includes("specialize") || 
              lowercaseQuery.includes("industry")) {
       response = `RevX specializes in enhancing digital presence and revenue of businesses, particularly in the ${businessInfo.specialization}.`;
     }
-    // Experience
     else if (lowercaseQuery.includes("experience") || 
              lowercaseQuery.includes("how long")) {
       response = `RevX has ${businessInfo.experience} of experience in the digital consulting industry.`;
     }
-    // Case studies - General
     else if (lowercaseQuery.includes("case stud") || 
              lowercaseQuery.includes("success stor") || 
              lowercaseQuery.includes("client success") ||
@@ -112,7 +126,6 @@ export default function ClientHome() {
       ).join("\n\n");
       response = `Here are some of RevX's success stories:\n\n${caseStudiesText}`;
     }
-    // Case study - Specific client
     else if (lowercaseQuery.includes("bar peepal")) {
       const caseStudy = businessInfo.caseStudies[0];
       response = `For ${caseStudy.client}, RevX ${caseStudy.work}, resulting in ${caseStudy.results}. More details are available at ${caseStudy.url}.`;
@@ -125,7 +138,6 @@ export default function ClientHome() {
       const caseStudy = businessInfo.caseStudies[2];
       response = `For ${caseStudy.client}, RevX ${caseStudy.work}, resulting in ${caseStudy.results}. More details are available at ${caseStudy.url}.`;
     }
-    // Contact information
     else if (lowercaseQuery.includes("contact") || 
              lowercaseQuery.includes("reach") || 
              lowercaseQuery.includes("get in touch") ||
@@ -134,7 +146,6 @@ export default function ClientHome() {
              lowercaseQuery.includes("email")) {
       response = `You can contact RevX at:\n\nUS Office: ${businessInfo.contactInfo.usOffice.location}, Phone: ${businessInfo.contactInfo.usOffice.phone}\n\nNepal Office: ${businessInfo.contactInfo.nepalOffice.location}, Phone: ${businessInfo.contactInfo.nepalOffice.phone}\n\nEmail: ${businessInfo.contactInfo.email}`;
     }
-    // Location specific
     else if (lowercaseQuery.includes("usa") || 
              lowercaseQuery.includes("us office") || 
              lowercaseQuery.includes("united states") ||
@@ -146,34 +157,29 @@ export default function ClientHome() {
              lowercaseQuery.includes("kathmandu")) {
       response = `RevX's Nepal office is located at ${businessInfo.contactInfo.nepalOffice.location}. You can reach them at ${businessInfo.contactInfo.nepalOffice.phone}.`;
     }
-    // Blog/Insights
     else if (lowercaseQuery.includes("blog") || 
              lowercaseQuery.includes("insight") || 
              lowercaseQuery.includes("article") ||
              lowercaseQuery.includes("thought leadership")) {
       response = `RevX shares insights through their blog, covering topics such as:\n\n- ${businessInfo.blogs.join('\n- ')}`;
     }
-    // Revenue maximization specifically
     else if (lowercaseQuery.includes("revenue maximization") || 
              lowercaseQuery.includes("increase revenue") || 
              lowercaseQuery.includes("boost revenue")) {
       response = "RevX provides strategic revenue management solutions aimed at increasing occupancy rates and maximizing profitability for hospitality clients.";
     }
-    // Website
     else if (lowercaseQuery.includes("website") || 
              lowercaseQuery.includes("site") || 
              lowercaseQuery.includes("url") ||
              lowercaseQuery.includes("web address")) {
       response = `You can visit RevX's website at ${businessInfo.contactInfo.website}`;
     }
-    // Greetings
     else if (lowercaseQuery.includes("hello") || 
              lowercaseQuery.includes("hi") || 
              lowercaseQuery.includes("hey") ||
              lowercaseQuery.includes("greetings")) {
       response = "Hello! I'm Spu, RevX's AI assistant. How can I help you learn more about RevX's digital consulting services today?";
     }
-    // Default response
     else {
       response = "I'm not sure I understand your question. You can ask me about RevX's services, case studies, contact information, or specific clients like Bar Peepal Resort. How else can I assist you?";
     }
@@ -212,16 +218,17 @@ export default function ClientHome() {
   } = useSpeechRecognition({ commands });
 
   useEffect(() => {
-    // Check for microphone permission
     if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(() => setMicrophoneError(null))
-        .catch(error => setMicrophoneError(error.message || 'Microphone permission denied'));
+        .catch(error => {
+          console.error("Microphone error:", error);
+          setMicrophoneError(error.message || 'Microphone permission denied');
+        });
     }
   }, []);
 
   useEffect(() => {
-    // Update listening state based on actual SpeechRecognition state
     setIsListening(listening);
   }, [listening]);
 
@@ -231,11 +238,16 @@ export default function ClientHome() {
         SpeechRecognition.stopListening();
       } else {
         resetTranscript();
-        SpeechRecognition.startListening({ continuous: true });
+        if (typeof window !== 'undefined' && 
+            (window.SpeechRecognition || window.webkitSpeechRecognition)) {
+          SpeechRecognition.startListening({ continuous: true });
+        } else {
+          throw new Error('Speech recognition not available in this browser');
+        }
       }
     } catch (error) {
       console.error('Speech recognition error:', error);
-      setMicrophoneError('Failed to start speech recognition');
+      setMicrophoneError('Failed to start speech recognition: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
   
@@ -246,6 +258,10 @@ export default function ClientHome() {
       setTextInput('');
     }
   };
+
+  if (!speechInitialized) {
+    return <div className="p-4 text-center">Initializing speech recognition...</div>;
+  }
 
   if (!browserSupportsSpeechRecognition) {
     return (

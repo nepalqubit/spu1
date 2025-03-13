@@ -2,7 +2,7 @@ declare module 'react-use-clipboard' {
   type UseClipboardOptions = {
     successDuration?: number;
     onSuccess?: () => void;
-    onError?: (error: any) => void;
+    onError?: () => void;
   };
 
   export default function useClipboard(
