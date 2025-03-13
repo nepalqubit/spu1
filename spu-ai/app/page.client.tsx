@@ -396,8 +396,26 @@ export default function ClientHome() {
     transcript,
     listening,
     resetTranscript,
-    browserSupportsSpeechRecognition,
-  } = useSpeechRecognition({ commands });
+    browserSupportsSpeechRecognition
+  } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcript) {
+      setTextInput(transcript);
+      handleQuery(transcript);
+    }
+  }, [transcript]);
+
+  const toggleListening = useCallback(() => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+      setIsListening(false);
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening({ continuous: true });
+      setIsListening(true);
+    }
+  }, [listening, resetTranscript]);
 
   useEffect(() => {
     try {
@@ -432,33 +450,6 @@ export default function ClientHome() {
     }
   }, [listening, browserSupportsSpeechRecognition]);
 
-  const toggleListening = () => {
-    try {
-      if (listening) {
-        SpeechRecognition.stopListening();
-        console.log('Speech recognition stopped');
-      } else {
-        resetTranscript();
-        if (typeof window !== 'undefined') {
-          if (window.SpeechRecognition || window.webkitSpeechRecognition) {
-            console.log('Starting speech recognition...');
-            SpeechRecognition.startListening({ continuous: true });
-          } else {
-            console.error('Speech recognition not available in this browser');
-            setMicrophoneError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
-            throw new Error('Speech recognition not available in this browser');
-          }
-        } else {
-          console.error('Window object not available');
-          throw new Error('Window object not available');
-        }
-      }
-    } catch (error) {
-      console.error('Speech recognition error:', error);
-      setMicrophoneError('Failed to start speech recognition: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-  
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (textInput.trim()) {
@@ -490,156 +481,89 @@ export default function ClientHome() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col h-[600px]">
-      {microphoneError && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-700">Microphone error: {microphoneError}</p>
-          <p className="mt-1 text-sm">Please check your browser permissions and try again.</p>
-        </div>
-      )}
-
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={toggleListening}
-          className={`p-3 rounded-full flex items-center justify-center ${
-            isListening
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-blue-500 hover:bg-blue-600'
-          } text-white transition-colors duration-200`}
-        >
-          {isListening ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          )}
-        </button>
-        <div className="text-sm font-medium">
-          {isListening ? (
-            <span className="flex items-center text-red-500">
-              <span className="relative flex h-3 w-3 mr-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-              Listening...
-            </span>
-          ) : (
-            <span className="text-gray-500">Click microphone to start voice input</span>
-          )}
-        </div>
-      </div>
-
-      {/* Chat container with message bubbles */}
-      <div 
-        ref={chatContainerRef}
-        className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 bg-gray-50 rounded-lg"
-        style={{ height: 'calc(100% - 180px)' }}
-      >
-        {conversation.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400 text-center">
-            <div>
-              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <p>Start a conversation with RevX AI Assistant</p>
-              <p className="text-sm mt-2">Ask about our services, case studies, or contact information</p>
-            </div>
-          </div>
-        ) : (
-          conversation.map((message, index) => (
-            <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div 
-                className={`max-w-[80%] p-3 rounded-lg ${
-                  message.type === 'user' 
-                    ? 'bg-blue-500 text-white rounded-br-none' 
-                    : 'bg-gray-200 text-gray-800 rounded-bl-none'
+    <div className="min-h-screen bg-gray-100">
+      <SpeechSetup />
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold text-center mb-8">RevX AI Assistant</h1>
+          
+          {/* Chat Container */}
+          <div 
+            ref={chatContainerRef}
+            className="bg-white rounded-lg shadow-lg p-6 mb-6 h-[60vh] overflow-y-auto"
+          >
+            {conversation.map((message, index) => (
+              <div
+                key={index}
+                className={`mb-4 ${
+                  message.type === 'user' ? 'text-right' : 'text-left'
                 }`}
               >
-                {message.type === 'assistant' && (
-                  <div className="flex items-center mb-1">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mr-2">
-                      <span className="text-white text-xs font-bold">R</span>
-                    </div>
-                    <span className="text-xs font-medium">RevX Assistant</span>
-                  </div>
-                )}
-                <div className="whitespace-pre-line">{message.content}</div>
-                {message.type === 'assistant' && (
-                  <button
-                    onClick={() => {
-                      setTextToCopy(message.content);
-                      setCopyToClipboard();
-                    }}
-                    className="text-xs mt-2 px-2 py-1 bg-gray-100 text-gray-700 rounded"
-                  >
-                    {isCopied && textToCopy === message.content ? 'Copied!' : 'Copy'}
-                  </button>
-                )}
+                <div
+                  className={`inline-block p-3 rounded-lg ${
+                    message.type === 'user'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  {message.content}
+                </div>
               </div>
-            </div>
-          ))
-        )}
-        
-        {/* Show transcript while listening */}
-        {isListening && transcript && (
-          <div className="flex justify-end">
-            <div className="max-w-[80%] p-3 bg-blue-200 text-blue-800 rounded-lg rounded-br-none italic">
-              {transcript}
-              <div className="text-xs text-blue-600 mt-1">Listening...</div>
-            </div>
+            ))}
           </div>
-        )}
-      </div>
 
-      {/* Input form at bottom */}
-      <form onSubmit={handleTextSubmit} className="mt-auto">
-        <div className="flex gap-2 items-center">
-          <input
-            type="text"
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Type your question here..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            ref={inputRef}
-          />
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg flex items-center justify-center"
-            disabled={!textInput.trim()}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
-        </div>
-      </form>
-
-      {/* Quick questions section */}
-      <div className="mt-4">
-        <h3 className="text-xs font-medium text-gray-500 mb-2">Try asking:</h3>
-        <div className="flex flex-wrap gap-2">
-          {[
-            "What is RevX?", 
-            "What services does RevX offer?", 
-            "Tell me about RevX's case studies", 
-            "How can I contact RevX?",
-            "What is RevX's experience?"
-          ].map((question) => (
-            <button 
-              key={question}
-              onClick={() => {
-                setTextInput(question);
-                handleQuery(question);
-              }}
-              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full"
-            >
-              {question}
-            </button>
-          ))}
+          {/* Input Area */}
+          <div className="relative">
+            <div className="flex items-center">
+              <input
+                ref={inputRef}
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && textInput.trim()) {
+                    handleQuery(textInput.trim());
+                    setTextInput('');
+                  }
+                }}
+                placeholder="Type your message or click the microphone to speak..."
+                className="flex-1 p-4 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={toggleListening}
+                disabled={!browserSupportsSpeechRecognition}
+                className={`p-4 rounded-r-lg ${
+                  isListening
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } text-white transition-colors duration-200`}
+                title={isListening ? 'Stop Recording' : 'Start Recording'}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+              </button>
+            </div>
+            {microphoneError && (
+              <p className="text-red-500 text-sm mt-2">{microphoneError}</p>
+            )}
+            {!browserSupportsSpeechRecognition && (
+              <p className="text-yellow-500 text-sm mt-2">
+                Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
