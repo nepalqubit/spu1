@@ -1,28 +1,28 @@
-# RevX AI Assistant
+# RevX AI Assistant with OpenRouter AI
 
-A modern AI voice assistant built for RevX digital consulting firm, powered by Next.js and speech recognition.
+A sophisticated AI assistant built for RevX digital consulting firm, enhanced with OpenRouter AI for intelligent responses.
 
 ## Features
 
-- Voice input using browser's speech recognition
-- Text input support
-- Modern, responsive UI
-- Copy-to-clipboard functionality
-- Real-time transcription display
-- RevX-specific knowledge base
+* **AI-Powered Responses**: Uses OpenRouter.ai with Claude 3 Haiku for enhanced, intelligent responses
+* **Context-Aware Conversations**: Maintains conversation history for more relevant responses
+* **Local Knowledge Base**: Built-in information about RevX's services and offerings
+* **Modern, Responsive UI**: Beautiful interface that works on all devices
+* **Copy-to-Clipboard**: Easy sharing of AI responses
 
-## Prerequisites
+## Tech Stack
 
-- Node.js 18.x or later
-- npm or yarn package manager
-- Modern web browser with speech recognition support
+* **Next.js**: React framework for production
+* **TypeScript**: Type-safe JavaScript
+* **Tailwind CSS**: Utility-first CSS framework
+* **OpenRouter.ai API**: Access to state-of-the-art AI models
 
 ## Getting Started
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd revx-ai-assistant
+git clone https://github.com/nepalqubit/spu1.git
+cd spu1/spu-ai
 ```
 
 2. Install dependencies:
@@ -32,14 +32,30 @@ npm install
 yarn install
 ```
 
-3. Run the development server:
+3. Set up environment variables:
+Create a `.env.local` file with the following:
+```
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_URL=https://openrouter.ai/api/v1/chat/completions
+```
+
+4. Run the development server:
 ```bash
 npm run dev
 # or
 yarn dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## OpenRouter AI Integration
+
+This assistant uses OpenRouter.ai to access powerful AI models like Claude 3 Haiku. The integration:
+
+1. First generates a baseline answer from local knowledge
+2. Sends the conversation history and baseline answer to OpenRouter
+3. Receives an enhanced, more contextual response
+4. Displays the AI-enhanced response to the user
 
 ## Deployment on Vercel
 
@@ -60,41 +76,26 @@ vercel login
 vercel
 ```
 
-4. For production deployment:
-```bash
-vercel --prod
-```
-
 ### Option 2: Deploy via Vercel Dashboard
 
-1. Push your code to a GitHub, GitLab, or Bitbucket repository.
-
-2. Visit [Vercel Dashboard](https://vercel.com/dashboard) and login.
-
-3. Click "New Project" and import your repository.
-
-4. Select the repository and configure your project settings.
-   - Framework preset: Next.js
-   - Root directory: ./spu-ai (if your project is in a subdirectory)
-
-5. Click "Deploy" and wait for the build to complete.
-
-6. Your app will be available at a Vercel URL (e.g., revx-ai-assistant.vercel.app)
+1. Push your code to GitHub
+2. Visit [Vercel Dashboard](https://vercel.com/dashboard)
+3. Import your repository
+4. Configure as a Next.js project
+5. Add environment variables for OpenRouter
+6. Deploy
 
 ## Environment Variables
 
-To configure the app, you may need to set the following environment variables in Vercel:
+Required for deployment:
 
-- `NEXT_PUBLIC_APP_NAME`: RevX AI Assistant
-- `NEXT_PUBLIC_APP_DESCRIPTION`: Your intelligent voice assistant for RevX digital consulting
-
-## Browser Support
-
-This application requires a modern browser that supports the Web Speech API:
-- Google Chrome
-- Microsoft Edge
-- Safari (with permissions)
+* `OPENROUTER_API_KEY`: Your OpenRouter API key
+* `OPENROUTER_URL`: The OpenRouter API endpoint
 
 ## License
 
 MIT
+
+## About RevX
+
+RevX is a comprehensive technology and digital solutions provider specializing in software development, digital marketing, data science, AI solutions, and OTA (Online Travel Agency) revenue optimization.
