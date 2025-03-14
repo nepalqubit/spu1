@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // Specify the output mode explicitly
+  output: 'standalone',
+  // Disable polling to prevent file system issues
   webpack: (config, { isServer }) => {
     // Add polyfills for browser-only features
     if (!isServer) {
@@ -13,9 +16,15 @@ const nextConfig = {
       };
     }
     
+    // Add optimization settings
+    config.watchOptions = {
+      poll: false,
+      ignored: ['**/node_modules', '**/.git'],
+    };
+    
     return config;
   },
-  // Configure domain patterns to allow
+  // Configure security headers
   async headers() {
     return [
       {
